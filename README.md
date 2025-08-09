@@ -40,5 +40,4 @@ The firmware runs on two separate hardware units:
 [HX711 + ESP32] ---> Wi-Fi ---> Firebase Realtime Database
 [Maduino Zero GPS] ---> LTE/USB ---> Firebase Realtime Database
 
----
 
