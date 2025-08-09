@@ -39,3 +39,23 @@ The firmware runs on two separate hardware units:
 ```plaintext
 [HX711 + ESP32] ---> Wi-Fi ---> Firebase Realtime Database
 [Maduino Zero GPS] ---> LTE/USB ---> Firebase Realtime Database
+
+---
+
+##  Example JSON Payloads
+
+### **GPS Data (Maduino Zero):**
+
+{
+  "dog_id": "dog_123",
+  "timestamp": "2025-08-09T10:23:45Z",
+  "latitude": 32.0853,
+  "longitude": 34.7818
+}
+
+### **Weight Data (ESP32 + HX711):**
+{
+  "dog_id": "dog_123",
+  "timestamp": "2025-08-09T10:23:45Z",
+  "weight": 350
+}
