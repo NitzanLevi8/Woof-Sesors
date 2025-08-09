@@ -3,26 +3,36 @@
 const String SENSOR_ID = "GPSsensor1";
 const String FIREBASE_URL = "https://woof-gps-default-rtdb.europe-west1.firebasedatabase.app/location/" + SENSOR_ID + ".json";
 
-// ========== AT Command=========
+// ========== AT Command ==========
 void sendAT(String command, int wait = 1000) {
+  // Logs go to SerialUSB (USB console)
   SerialUSB.println(">>> " + command);
+  // Send the command to the modem (Serial1)
   MODEM.println(command);
-  delay(wait);
-  while (MODEM.available()) {
-    SerialUSB.write(MODEM.read());
+  // Wait and dump modem response to USB
+  unsigned long endAt = millis() + wait;
+  while (millis() < endAt) {
+    while (MODEM.available()) {
+      SerialUSB.write(MODEM.read());
+    }
   }
   SerialUSB.println("-----------------------");
 }
 
-// ======= Initializing  ==========
+// ======= Initializing ==========
 void setup() {
+  // USB console
   SerialUSB.begin(115200);
-  while (!SerialUSB);
+  while (!SerialUSB) { /* wait for native USB */ }
+  delay(300);
+  SerialUSB.println("\n[BOOT] Maduino Zero + SIM7600E");
+
+  // UART to modem
   MODEM.begin(115200);
-  delay(3000);
+  delay(2000);
 
   SerialUSB.println("Starting GPS...");
-  MODEM.println("AT+CGPS=1,1");  // הפעלת GPS
+  MODEM.println("AT+CGPS=1,1");  // enable GPS (standalone)
   delay(2000);
 }
 
@@ -33,7 +43,7 @@ void loop() {
   delay(1000);
 
   String response = readGPSResponse();
-  SerialUSB.println("GPS response");
+  SerialUSB.println("GPS response:");
   SerialUSB.println(response);
 
   String lat, lon;
@@ -48,7 +58,7 @@ void loop() {
   delay(10000); // Every 10 sec
 }
 
-// ========Sending POST to Firebase=========
+// ======== Sending POST to Firebase =========
 void postToFirebase(String json) {
   SerialUSB.println("Sending to Firebase");
   SerialUSB.println(json);
@@ -60,17 +70,23 @@ void postToFirebase(String json) {
   sendAT("AT+HTTPPARA=\"CONTENT\",\"application/json\"", 1000);
 
   MODEM.println("AT+HTTPDATA=" + String(json.length()) + ",10000");
-  delay(100);
-  if (MODEM.find("DOWNLOAD")) {
+  unsigned long endAt = millis() + 3000;
+  bool gotDownload = false;
+  while (millis() < endAt) {
+    if (MODEM.find("DOWNLOAD")) { gotDownload = true; break; }
+  }
+  if (gotDownload) {
     MODEM.print(json);
     delay(500);
+  } else {
+    SerialUSB.println("HTTPDATA DOWNLOAD not received");
   }
 
   sendAT("AT+HTTPACTION=1", 6000);  // POST
   sendAT("AT+HTTPTERM", 500);
 }
 
-// ======= GPS respons =========
+// ======= GPS response =========
 String readGPSResponse() {
   String res = "";
   unsigned long timeout = millis() + 3000;
@@ -83,7 +99,7 @@ String readGPSResponse() {
   return res;
 }
 
-// ========Converting degree to decimal==========
+// ======== Converting degree to decimal ==========
 float convertDMMtoDecimal(float dmm, String direction) {
   int degrees = int(dmm / 100);
   float minutes = dmm - (degrees * 100);
@@ -92,7 +108,7 @@ float convertDMMtoDecimal(float dmm, String direction) {
   return decimal;
 }
 
-// ==========parsing GPS respons==========
+// ========== parsing GPS response ==========
 bool parseGPS(String response, String &latOut, String &lonOut) {
   int start = response.indexOf(":");
   if (start == -1) return false;
@@ -118,7 +134,7 @@ bool parseGPS(String response, String &latOut, String &lonOut) {
   return true;
 }
 
-// ========timestamp from GPS =========
+// ======== timestamp from GPS =========
 String extractTimestamp(String response) {
   int start = response.indexOf(":");
   if (start == -1) return "";
