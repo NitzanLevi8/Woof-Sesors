@@ -1,5 +1,3 @@
-קוד עובד לGPS WOOF
-
 #define MODEM Serial1
 
 const String SENSOR_ID = "GPSsensor1";
